@@ -20,9 +20,9 @@
 // define CPU speed (7.3728 MHz for the ATmega128A)
 #define F_CPU   7372800UL
 
-#define CR          0x0D
-#define LF          0x0A
-#define ESC         0x1B
+#define CR          0x0D		// Enter
+#define LF          0x0A		// New line
+#define ESC         0x1B		// escape
 
 #include <avr/io.h>
 #include <util/delay.h>
@@ -33,11 +33,21 @@
 #define STOPBITS    1 // 1,2
 #define PARITY      0 // 0=none, 1=odd, 2=even
 
-/* Your code here.  */
+const char msg[] = "\r\n\r\nRS232 Communications Server\r\nStatus: Active\r\nJack Robinson\r\nEECE3624\r\nFall 2026\r\n\r\n";
+const char bye[] = "\r\n\r\nBye";
+
+void print(const char *s)
+{
+	while (*s) uart_tx(*s++);
+}
 
 int main(void)
 {
-	/* Your code here.  */
+		char c;
+		unsigned char count = 0;   // number of letters of "end" matched
+
+		DDRC |= 1;                 // LED0 on PC0 (assumed; active-low)
+		PORTC |= 1;                // LED off
 
     /* See the UARTLibrary.h for available calls.
 	 *     	  // initialize the UART
@@ -52,9 +62,35 @@ int main(void)
 	 */
 
 	uart_init(BAUDRATE, DATABITS, STOPBITS, PARITY);
+	print(msg);
 	while(1)
 	{
-		/* your loop code here */
+				c = uart_rx();
+				PORTC &= ~1;           // LED on
+				_delay_ms(75);
+				PORTC |= 1;            // LED off
+
+				if (c == ESC) {
+					print(msg);
+					count = 0;
+					continue;
+				}
+				uart_tx(c);
+				if (c == CR){
+					 uart_tx(LF);
+				}
+
+				if (c == 'e'){
+					 count = 1;
+				}
+				else if (c == 'n' && count == 1){
+					count = 2;
+				}
+				else if (c == 'd' && count == 2) {
+					print(bye);
+					while (1) {}
+				}
+				else count = 0;
 		
 	}
 	return 0;
